@@ -14,6 +14,7 @@ import javafx.scene.paint.Color;
 public enum Field {
     PLAYER(Color.BROWN,2147483646),
     EMPTY(Color.gray(0.8),0),
+    GENERATED(Color.AQUAMARINE,2147483645),
     WALL(Color.gray(0.2),2147483647);
     
     public Color color;
