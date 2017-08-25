@@ -3,4 +3,4 @@
 # MazeFX
 Implementation of a Maze using JavaFX
 
-C++ version [Maze](https://github.com/vitorOta/Maze)
+[C++ version](https://github.com/vitorOta/Maze)
