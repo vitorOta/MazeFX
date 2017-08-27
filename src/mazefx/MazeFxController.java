@@ -11,23 +11,13 @@ import java.util.List;
 import java.util.Random;
 import java.util.ResourceBundle;
 import javafx.event.ActionEvent;
-import javafx.event.EventHandler;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
-import javafx.geometry.Insets;
+import javafx.scene.canvas.Canvas;
+import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Alert;
-import javafx.scene.control.Button;
-import javafx.scene.control.Dialog;
-import javafx.scene.control.DialogEvent;
-import javafx.scene.control.Label;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import javafx.scene.layout.Background;
-import javafx.scene.layout.BackgroundFill;
-import javafx.scene.layout.CornerRadii;
-import javafx.scene.layout.GridPane;
-import javafx.scene.layout.HBox;
-import javafx.scene.layout.VBox;
 import mazefx.enums.Field;
 import mazefx.enums.Movement;
 
@@ -38,51 +28,37 @@ import mazefx.enums.Movement;
 public class MazeFxController implements Initializable {
 
     @FXML
-    private VBox vBox;
+    Canvas canvas;
 
-    @FXML
-    private Button bNewGame;
-    
-    
+    GraphicsContext gc;
+
     //TODO refactor
     int mazeSize = 20;
     Field[][] maze = new Field[mazeSize][mazeSize];
-    Button[][] buttons = new Button[maze.length][maze[0].length];
 
     boolean gameStarted = false;
 
     Random random;
 
-    final List<Movement> possibleMovements = Arrays.asList(Movement.values());
-
     Movement newGameMoveTo;
     Movement newGameLastMove;
     int[] newGameCurrents = new int[]{0, 0};
-    
+
     @Override
     public void initialize(URL url, ResourceBundle rb) {
         random = new Random();
-        initComponents();
-        bNewGame.setVisible(false);
+        canvas.focusTraversableProperty().set(true);
+        gc = canvas.getGraphicsContext2D();
+        //bNewGame.setVisible(false);
         newGame();
-    }
-
-    void initComponents() {
-        double bHeight = vBox.getHeight() / buttons.length;
-        double bWidht = vBox.getWidth() / buttons[0].length;
-        for (int row = 0; row < buttons.length; row++) {
-            for (int column = 0; column < buttons[row].length; column++) {
-                Button b = new Button();
-                b.setPrefSize(bHeight, bWidht);
-                buttons[row][column] = b;
-            }
-            HBox box = new HBox(buttons[row]);
-            vBox.getChildren().add(box);
-        }
     }
 
     @FXML
     void move(KeyEvent event) {
+        if (event.getCode() == KeyCode.N) {
+            newGame();
+            return;
+        }
         move(event.getCode());
     }
 
@@ -114,24 +90,31 @@ public class MazeFxController implements Initializable {
                 break;
         }
 
-        
-        boolean moved = moveOnMaze(newGameMoveTo, Field.PLAYER, newGameCurrents, true);
+        moveOnMaze(newGameMoveTo, Field.PLAYER, newGameCurrents, true);
         newGameLastMove = newGameMoveTo;
         showMaze();
 
         if (MazeFxController.this.isGameEnd()) {
             Alert a = new Alert(Alert.AlertType.CONFIRMATION, "Parabéns ! \n\nImplementar iniciar novo jogo ao finalizar um");
             a.show();
+            a.setOnCloseRequest((event) -> {
+                newGame();
+            });
+
             return;
         }
 
     }
 
     void showMaze() {
-        for (int row = 0; row < maze.length; row++) {
-            for (int column = 0; column < maze[row].length; column++) {
+        double bHeight = canvas.getHeight() / mazeSize;
+        double bWidth = canvas.getWidth() / mazeSize;
+
+        for (int row = 0; row < mazeSize; row++) {
+            for (int column = 0; column < mazeSize; column++) {
                 Field field = maze[row][column];
-                buttons[row][column].setBackground(new Background(new BackgroundFill(field.color, CornerRadii.EMPTY, Insets.EMPTY)));
+                gc.setFill(field.color);
+                gc.fillRect(column * bWidth, row * bHeight, bWidth, bHeight);
             }
         }
     }
@@ -142,10 +125,10 @@ public class MazeFxController implements Initializable {
         //TODO add the check to see if the adjacents positions are walls
         switch (moveTo) {
             case RIGHT:
-                isPossibleMoveTo = currentColumn < maze[currentRow].length - 1 && maze[currentRow][currentColumn + 1] != Field.WALL;
+                isPossibleMoveTo = currentColumn < mazeSize - 1 && maze[currentRow][currentColumn + 1] != Field.WALL;
                 break;
             case DOWN:
-                isPossibleMoveTo = currentRow < maze.length - 1 && maze[currentRow + 1][currentColumn] != Field.WALL;
+                isPossibleMoveTo = currentRow < mazeSize - 1 && maze[currentRow + 1][currentColumn] != Field.WALL;
                 break;
             case LEFT:
                 isPossibleMoveTo = currentColumn > 0 && maze[currentRow][currentColumn - 1] != Field.WALL;
@@ -158,91 +141,171 @@ public class MazeFxController implements Initializable {
         return isPossibleMoveTo;
     }
 
-    Movement randomNextMove(Movement lastMove, int currentRow, int currentColumn) {
-        //right or down ++ // left or up --
+    Movement generateMove(final Movement lastMove, int currentRow, int currentColumn) {
         Movement moveTo = null;
         boolean canMove = true;
 
+        boolean[] trieds = new boolean[3]; //TODO back to 4 after fix
+        List<Movement> movements = Arrays.asList(Movement.values());
         do {
-            //4 possible movements
-            moveTo = possibleMovements.get(random.nextInt(2)); //I see a bug here when moving up //TODO fix this bug
+            boolean allTried = true;
+            for (boolean tried : trieds) {
+                if (!tried) {
+                    allTried = false;
+                    break;
+                }
+            }
+            if (allTried) {
+                throw new RuntimeException("Bad programmed");
+            }
+
+            int r = random.nextInt(3); //TODO back to 4 after fix
+            if (trieds[r]) {
+                continue;
+            }
+
+            moveTo = movements.get(r);
+            trieds[r] = true;
 
             // after a move, you CAN'T move to his oposite direction (example, go to down, after up)
             boolean isOpositeMove = moveTo.getOposte() == lastMove;
 
             canMove = !isOpositeMove && isPossibleMoveTo(moveTo, currentRow, currentColumn);
 
+            boolean willTouchGenerated = false;
+            boolean hasRestrictions = false;
+
+            if (canMove) {
+                //hasRestrictions
+                switch (moveTo) {
+                    case LEFT:
+                        hasRestrictions = currentRow > mazeSize - 2 && currentRow > 1;
+                        break;
+                    case UP:
+                        hasRestrictions = currentColumn > mazeSize - 2 && currentColumn > 1;
+                        break;
+
+                }
+
+//                //hasAdjacentsGen
+//                if (!hasRestrictions) {
+//
+//                    switch (moveTo) {
+//                        case RIGHT:
+//                            willTouchGenerated
+//                                    = (currentColumn < mazeSize - 2 ? maze[currentRow][currentColumn + 2] : null) == Field.GENERATED
+//                                    || (currentRow > 0 && currentColumn < mazeSize - 1 ? maze[currentRow - 1][currentColumn + 1] : null) == Field.GENERATED
+//                                    || (currentRow < mazeSize - 1 && currentColumn < mazeSize - 1 ? maze[currentRow + 1][currentColumn + 1] : null) == Field.GENERATED;
+//                            break;
+//                        case DOWN:
+//                            willTouchGenerated
+//                                    = (currentRow < mazeSize - 2 ? maze[currentRow + 2][currentColumn] : null) == Field.GENERATED
+//                                    ||
+//                                    ||;
+//                            break;
+//                        case LEFT:
+//                            willTouchGenerated
+//                                    = (currentColumn < 1 ? maze[currentRow][currentColumn + 2] : null) == Field.GENERATED
+//                                    || (currentRow > 0 && currentColumn > 0 ? maze[currentRow - 1][currentColumn - 1] : null) == Field.GENERATED
+//                                    || (currentRow < mazeSize - 1 && currentColumn > 0 ? maze[currentRow + 1][currentColumn - 1] : null) == Field.GENERATED;
+//                            break;
+//                        case UP:
+//                            willTouchGenerated
+//                                    = (currentRow > 1 ? maze[currentRow - 2][currentColumn] : null) == Field.GENERATED
+//                                    ||
+//                                    ||;
+//                            break;
+//                    }
+//                }
+
+            }
+
+            canMove &= !hasRestrictions && !willTouchGenerated;
+
         } while (!canMove);
 
         return moveTo;
     }
 
-    boolean moveOnMaze(Movement moveTo, Field field, int[] currents, boolean clearCurrent) {
+    void moveOnMaze(Movement moveTo, Field field, int[] currents, boolean clearCurrent) {
         int currentRow = currents[0];
         int currentColumn = currents[1];
 
         if (!isPossibleMoveTo(moveTo, currentRow, currentColumn)) {
-            return false;
+            return;
         }
 
-        boolean moved = possibleMovements.contains(moveTo);
-
-        if (moved) {
-            if (clearCurrent) {
-                maze[currentRow][currentColumn] = Field.EMPTY;
-            }
-            switch (moveTo) {
-                case RIGHT:
-                    currentColumn++;
-                    break;
-                case DOWN:
-                    currentRow++;
-                    break;
-                case LEFT:
-                    currentColumn--;
-                    break;
-                case UP:
-                    currentRow--;
-                    break;
-            }
-            maze[currentRow][currentColumn] = field;
-            currents[0] = currentRow;
-            currents[1] = currentColumn;
+        if (clearCurrent) {
+            maze[currentRow][currentColumn] = Field.EMPTY;
         }
-        return moved;
+        switch (moveTo) {
+            case RIGHT:
+                currentColumn++;
+                break;
+            case DOWN:
+                currentRow++;
+                break;
+            case LEFT:
+                currentColumn--;
+                break;
+            case UP:
+                currentRow--;
+                break;
+        }
+        maze[currentRow][currentColumn] = field;
+        currents[0] = currentRow;
+        currents[1] = currentColumn;
+
+    }
+
+    void clearMaze() {
+        for (int i = 0; i < mazeSize; i++) {
+            for (int j = 0; j < mazeSize; j++) {
+                maze[i][j] = null;
+            }
+
+        }
     }
 
     void generateMaze() {
-        Field markAsGenerated = Field.EMPTY;// 99999999;
+        clearMaze();
+
+        Field markAsGenerated = Field.GENERATED;// Field.GENERATED;
 
         Movement lastMove = null;
         int currents[] = new int[]{0, 0};
-        
+
         //initial
         maze[currents[0]][currents[1]] = markAsGenerated;
 
-        while (!(currents[0] == maze.length - 1 && currents[1] == maze[0].length - 1)) {
+        while (!(currents[0] == mazeSize - 1 && currents[1] == mazeSize - 1)) {
             //TODO dude, you was almost sleeping, the ugly code has a reason
-            
-            Movement moveTo = randomNextMove(lastMove, currents[0], currents[1]);
+
+            Movement moveTo = generateMove(lastMove, currents[0], currents[1]);
             moveOnMaze(moveTo, markAsGenerated, currents, false);
             lastMove = moveTo;
         }
 
+        int i = 0;
         //populating maze
         for (int row = 0; row < mazeSize; row++) {
             for (int column = 0; column < mazeSize; column++) {
                 Field field = Field.EMPTY;
-                if (maze[row][column] != markAsGenerated && random.nextInt(3) > 0) {
+                if (maze[row][column] == markAsGenerated) {
+//                    field = Field.GENERATED; //TODO take this off when finish your debug
+                } else if (random.nextInt(5) > 0) {
                     field = Field.WALL;
                 }
-                maze[row][column] = field;
+
+//                if (maze[row][column] == null) {
+                    maze[row][column] = field;
+//                }
             }
         }
     }
 
     boolean isGameEnd() {
-        return maze[maze.length - 1][maze[0].length - 1] == Field.PLAYER;
+        return maze[mazeSize - 1][mazeSize - 1] == Field.PLAYER;
     }
 
     void initNewGameVars() {
