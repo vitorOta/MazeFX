@@ -145,6 +145,8 @@ public class MazeFxController implements Initializable {
         Movement moveTo = null;
         boolean canMove = true;
 
+        
+        //TODO use a list and Collections.shuffle instead of sorting a random number. Each time you get a movement, take away from array, this mode I'll made the control of movements trieds
         boolean[] trieds = new boolean[3]; //TODO back to 4 after fix
         List<Movement> movements = Arrays.asList(Movement.values());
         do {
