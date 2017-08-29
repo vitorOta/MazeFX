@@ -6,10 +6,8 @@
 package mazefx;
 
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
-import java.util.ResourceBundle;
+import java.util.*;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.Initializable;
@@ -22,7 +20,6 @@ import mazefx.enums.Field;
 import mazefx.enums.Movement;
 
 /**
- *
  * @author VitorOta
  */
 public class MazeFxController implements Initializable {
@@ -33,7 +30,7 @@ public class MazeFxController implements Initializable {
     GraphicsContext gc;
 
     //TODO refactor
-    int mazeSize = 20;
+    int mazeSize = 10;
     Field[][] maze = new Field[mazeSize][mazeSize];
 
     boolean gameStarted = false;
@@ -145,34 +142,20 @@ public class MazeFxController implements Initializable {
         Movement moveTo = null;
         boolean canMove = true;
 
-        
-        //TODO use a list and Collections.shuffle instead of sorting a random number. Each time you get a movement, take away from array, this mode I'll made the control of movements trieds
-        boolean[] trieds = new boolean[3]; //TODO back to 4 after fix
-        List<Movement> movements = Arrays.asList(Movement.values());
+
+        List<Movement> movements = new ArrayList<>(Arrays.asList(Movement.values()));
         do {
-            boolean allTried = true;
-            for (boolean tried : trieds) {
-                if (!tried) {
-                    allTried = false;
-                    break;
-                }
-            }
-            if (allTried) {
-                throw new RuntimeException("Bad programmed");
+            if (movements.size() == 0) {
+//                "".toString();
+                throw new RuntimeException("Programmed wrong");
             }
 
-            int r = random.nextInt(3); //TODO back to 4 after fix
-            if (trieds[r]) {
-                continue;
-            }
+            Collections.shuffle(movements, random);
+            moveTo = movements.remove(0);
 
-            moveTo = movements.get(r);
-            trieds[r] = true;
+            boolean isOppositeMove = moveTo.getOpposite() == lastMove;
 
-            // after a move, you CAN'T move to his oposite direction (example, go to down, after up)
-            boolean isOpositeMove = moveTo.getOposte() == lastMove;
-
-            canMove = !isOpositeMove && isPossibleMoveTo(moveTo, currentRow, currentColumn);
+            canMove = !isOppositeMove && isPossibleMoveTo(moveTo, currentRow, currentColumn);
 
             boolean willTouchGenerated = false;
             boolean hasRestrictions = false;
@@ -180,45 +163,79 @@ public class MazeFxController implements Initializable {
             if (canMove) {
                 //hasRestrictions
                 switch (moveTo) {
-                    case LEFT:
-                        hasRestrictions = currentRow > mazeSize - 2 && currentRow > 1;
+                    case RIGHT:
+                        hasRestrictions =
+                                (currentRow > 0 && currentColumn < mazeSize - 2 ? maze[currentRow - 1][currentColumn + 2] : null) == Field.GENERATED
+                                        || (currentRow < mazeSize - 1 && currentColumn < mazeSize - 2 ? maze[currentRow + 1][currentColumn + 2] : null) == Field.GENERATED
+                                        || (currentRow > 1 && currentColumn < mazeSize - 2 ? maze[currentRow - 2][currentColumn + 2] : null) == Field.GENERATED
+                                        || (currentRow < mazeSize - 2 && currentColumn < mazeSize - 2 ? maze[currentRow + 2][currentColumn + 2] : null) == Field.GENERATED;
                         break;
+                    case LEFT:
+                        hasRestrictions =
+                                (currentRow > 0 && currentColumn > 1 ? maze[currentRow - 1][currentColumn - 2] : null) == Field.GENERATED
+                                        || (currentRow < mazeSize - 1 && currentColumn > 1 ? maze[currentRow + 1][currentColumn - 2] : null) == Field.GENERATED
+                                        || ((currentRow > 1 && currentColumn > 1 ? maze[currentRow - 2][currentColumn - 2] : null) == Field.GENERATED
+                                        && (currentRow < mazeSize - 2 && currentColumn > 1 ? maze[currentRow + 2][currentColumn - 2] : null) == Field.GENERATED)
+                                        || currentRow < 2
+                                        || currentRow >= mazeSize - 2
+                                        || ((currentRow < 2 || currentRow >= mazeSize - 2) && currentColumn < 2)
+                                        || ((currentRow < 2 || currentRow >= mazeSize - 2) && currentColumn > mazeSize - 2);
+                        break;
+
+                    case DOWN:
+                        hasRestrictions = (currentRow < mazeSize - 2 && currentColumn < mazeSize - 1 ? maze[currentRow + 2][currentColumn + 1] : null) == Field.GENERATED
+                                || (currentRow < mazeSize - 2 && currentColumn > 0 ? maze[currentRow + 2][currentColumn - 1] : null) == Field.GENERATED
+                                || (currentRow < mazeSize - 3 && currentColumn < mazeSize - 1 ? maze[currentRow + 3][currentColumn + 1] : null) == Field.GENERATED
+                                || (currentRow < mazeSize - 3 && currentColumn > 0 ? maze[currentRow + 3][currentColumn - 1] : null) == Field.GENERATED;
+                        ;
+                        break;
+
                     case UP:
-                        hasRestrictions = currentColumn > mazeSize - 2 && currentColumn > 1;
+
+                        hasRestrictions =
+                                (currentRow > 1 && currentColumn < mazeSize - 1 ? maze[currentRow - 2][currentColumn + 1] : null) == Field.GENERATED
+                                        || (currentRow > 1 && currentColumn > 0 ? maze[currentRow - 2][currentColumn - 1] : null) == Field.GENERATED
+                                        || ((currentRow > 1 && currentColumn < mazeSize - 2 ? maze[currentRow - 2][currentColumn + 2] : null) == Field.GENERATED
+                                        && (currentRow > 1 && currentColumn > 1 ? maze[currentRow - 2][currentColumn - 2] : null) == Field.GENERATED)
+                                        || currentColumn < 2
+                                        || currentColumn >= mazeSize - 2
+                                        || ((currentColumn < 2 || currentColumn >= mazeSize - 2) && currentRow < 2)
+                                        || ((currentColumn < 2 || currentColumn >= mazeSize - 2) && currentRow > mazeSize - 2);
                         break;
 
                 }
 
-//                //hasAdjacentsGen
-//                if (!hasRestrictions) {
-//
-//                    switch (moveTo) {
-//                        case RIGHT:
-//                            willTouchGenerated
-//                                    = (currentColumn < mazeSize - 2 ? maze[currentRow][currentColumn + 2] : null) == Field.GENERATED
-//                                    || (currentRow > 0 && currentColumn < mazeSize - 1 ? maze[currentRow - 1][currentColumn + 1] : null) == Field.GENERATED
-//                                    || (currentRow < mazeSize - 1 && currentColumn < mazeSize - 1 ? maze[currentRow + 1][currentColumn + 1] : null) == Field.GENERATED;
-//                            break;
-//                        case DOWN:
-//                            willTouchGenerated
-//                                    = (currentRow < mazeSize - 2 ? maze[currentRow + 2][currentColumn] : null) == Field.GENERATED
-//                                    ||
-//                                    ||;
-//                            break;
-//                        case LEFT:
-//                            willTouchGenerated
-//                                    = (currentColumn < 1 ? maze[currentRow][currentColumn + 2] : null) == Field.GENERATED
-//                                    || (currentRow > 0 && currentColumn > 0 ? maze[currentRow - 1][currentColumn - 1] : null) == Field.GENERATED
-//                                    || (currentRow < mazeSize - 1 && currentColumn > 0 ? maze[currentRow + 1][currentColumn - 1] : null) == Field.GENERATED;
-//                            break;
-//                        case UP:
-//                            willTouchGenerated
-//                                    = (currentRow > 1 ? maze[currentRow - 2][currentColumn] : null) == Field.GENERATED
-//                                    ||
-//                                    ||;
-//                            break;
-//                    }
-//                }
+                //hasAdjacentsGen
+                if (!hasRestrictions) {
+
+                    switch (moveTo) {
+                        case RIGHT:
+                            willTouchGenerated
+                                    = (currentColumn < mazeSize - 2 ? maze[currentRow][currentColumn + 2] : null) == Field.GENERATED
+                                    || (currentRow > 0 && currentColumn < mazeSize - 1 ? maze[currentRow - 1][currentColumn + 1] : null) == Field.GENERATED
+                                    || (currentRow < mazeSize - 1 && currentColumn < mazeSize - 1 ? maze[currentRow + 1][currentColumn + 1] : null) == Field.GENERATED;
+                            break;
+                        case DOWN:
+                            willTouchGenerated
+                                    = (currentRow < mazeSize - 2 ? maze[currentRow + 2][currentColumn] : null) == Field.GENERATED
+                                    || (currentRow < mazeSize - 1 && currentColumn < mazeSize - 1 ? maze[currentRow + 1][currentColumn + 1] : null) == Field.GENERATED
+                                    || (currentRow < mazeSize - 1 && currentColumn > 0 ? maze[currentRow + 1][currentColumn - 1] : null) == Field.GENERATED;
+                            break;
+                        case LEFT:
+                            willTouchGenerated
+                                    = (currentColumn > 1 ? maze[currentRow][currentColumn - 2] : null) == Field.GENERATED
+                                    || (currentRow > 0 && currentColumn > 0 ? maze[currentRow - 1][currentColumn - 1] : null) == Field.GENERATED
+                                    || (currentRow < mazeSize - 1 && currentColumn > 0 ? maze[currentRow + 1][currentColumn - 1] : null) == Field.GENERATED;
+
+                            break;
+                        case UP:
+                            willTouchGenerated
+                                    = (currentRow > 1 ? maze[currentRow - 2][currentColumn] : null) == Field.GENERATED
+                                    || (currentRow > 0 && currentColumn < mazeSize - 1 ? maze[currentRow - 1][currentColumn + 1] : null) == Field.GENERATED
+                                    || (currentRow > 0 && currentColumn > 0 ? maze[currentRow - 1][currentColumn - 1] : null) == Field.GENERATED;
+                            break;
+                    }
+                }
 
             }
 
@@ -269,6 +286,8 @@ public class MazeFxController implements Initializable {
         }
     }
 
+    List<Movement> generateds = new ArrayList<>();
+
     void generateMaze() {
         clearMaze();
 
@@ -280,12 +299,15 @@ public class MazeFxController implements Initializable {
         //initial
         maze[currents[0]][currents[1]] = markAsGenerated;
 
+
+        generateds = new ArrayList<>();
         while (!(currents[0] == mazeSize - 1 && currents[1] == mazeSize - 1)) {
             //TODO dude, you was almost sleeping, the ugly code has a reason
 
             Movement moveTo = generateMove(lastMove, currents[0], currents[1]);
             moveOnMaze(moveTo, markAsGenerated, currents, false);
             lastMove = moveTo;
+            generateds.add(moveTo);
         }
 
         int i = 0;
@@ -294,13 +316,13 @@ public class MazeFxController implements Initializable {
             for (int column = 0; column < mazeSize; column++) {
                 Field field = Field.EMPTY;
                 if (maze[row][column] == markAsGenerated) {
-//                    field = Field.GENERATED; //TODO take this off when finish your debug
+                    field = Field.GENERATED; //TODO take this off when finish your debug
                 } else if (random.nextInt(5) > 0) {
                     field = Field.WALL;
                 }
 
 //                if (maze[row][column] == null) {
-                    maze[row][column] = field;
+                maze[row][column] = field;
 //                }
             }
         }
