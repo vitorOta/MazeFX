@@ -25,7 +25,7 @@ public enum Movement {
         return values()[nextInt];
     }
     
-    public Movement getOposte(){
+    public Movement getOpposite(){
         return fromIndex(index + (index > 1 ? -2 : 2));
     }
     
