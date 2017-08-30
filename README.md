@@ -10,4 +10,4 @@ Implementation of a Maze using JavaFX (see [C++ version](https://github.com/vito
 
 
 ### // Future
-1. [ ] improve maze generator complexity
+1. [x] improve maze generator complexity
