@@ -18,6 +18,7 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
 import mazefx.enums.Field;
 import mazefx.enums.Movement;
+import mazefx.exception.BadProgrammedException;
 
 /**
  * @author VitorOta
@@ -30,7 +31,7 @@ public class MazeFxController implements Initializable {
     GraphicsContext gc;
 
     //TODO refactor
-    int mazeSize = 10;
+    int mazeSize = 50;
     Field[][] maze = new Field[mazeSize][mazeSize];
 
     boolean gameStarted = false;
@@ -138,7 +139,7 @@ public class MazeFxController implements Initializable {
         return isPossibleMoveTo;
     }
 
-    Movement generateMove(final Movement lastMove, int currentRow, int currentColumn) {
+    Movement generateMove(final Movement lastMove, int currentRow, int currentColumn) throws BadProgrammedException {
         Movement moveTo = null;
         boolean canMove = true;
 
@@ -147,7 +148,7 @@ public class MazeFxController implements Initializable {
         do {
             if (movements.size() == 0) {
 //                "".toString();
-                throw new RuntimeException("Programmed wrong");
+                throw new BadProgrammedException();
             }
 
             Collections.shuffle(movements, random);
@@ -286,44 +287,44 @@ public class MazeFxController implements Initializable {
         }
     }
 
-    List<Movement> generateds = new ArrayList<>();
-
     void generateMaze() {
-        clearMaze();
 
-        Field markAsGenerated = Field.GENERATED;// Field.GENERATED;
+        boolean badProgrammed = false;
+        do {
+            badProgrammed = false;
+            clearMaze();
 
-        Movement lastMove = null;
-        int currents[] = new int[]{0, 0};
+            Movement lastMove = null;
+            int currents[] = new int[]{0, 0};
 
-        //initial
-        maze[currents[0]][currents[1]] = markAsGenerated;
+            //initial
+            maze[currents[0]][currents[1]] = Field.GENERATED;
 
 
-        generateds = new ArrayList<>();
-        while (!(currents[0] == mazeSize - 1 && currents[1] == mazeSize - 1)) {
-            //TODO dude, you was almost sleeping, the ugly code has a reason
+            try {
+                while (!(currents[0] == mazeSize - 1 && currents[1] == mazeSize - 1)) {
+                    //TODO dude, you was almost sleeping, the ugly code has a reason
 
-            Movement moveTo = generateMove(lastMove, currents[0], currents[1]);
-            moveOnMaze(moveTo, markAsGenerated, currents, false);
-            lastMove = moveTo;
-            generateds.add(moveTo);
-        }
-
+                    Movement moveTo = generateMove(lastMove, currents[0], currents[1]);
+                    moveOnMaze(moveTo, Field.GENERATED, currents, false);
+                    lastMove = moveTo;
+                }
+            }catch (BadProgrammedException ex){
+                badProgrammed=true;
+                continue;
+            }
+        } while (badProgrammed);
         int i = 0;
         //populating maze
         for (int row = 0; row < mazeSize; row++) {
             for (int column = 0; column < mazeSize; column++) {
-                Field field = Field.EMPTY;
-                if (maze[row][column] == markAsGenerated) {
-                    field = Field.GENERATED; //TODO take this off when finish your debug
-                } else if (random.nextInt(5) > 0) {
-                    field = Field.WALL;
+                Field field = Field.WALL;
+                if (maze[row][column] == Field.GENERATED || random.nextInt(5) == 0) {
+                    field = Field.EMPTY;
                 }
 
-//                if (maze[row][column] == null) {
                 maze[row][column] = field;
-//                }
+
             }
         }
     }
