@@ -24,6 +24,18 @@ public enum Field {
         this.color = color;
         this.value=value;
     }
-    
+
+    public static Field fromValue(int value) {
+        Field[] values = values();
+
+        for (Field f : values) {
+            if (f.value == value) {
+                return f;
+            }
+        }
+
+        return Field.EMPTY;
+    }
+
     
 }

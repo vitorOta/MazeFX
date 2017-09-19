@@ -31,7 +31,7 @@ public class MazeFxController implements Initializable {
     GraphicsContext gc;
 
     //TODO refactor
-    int mazeSize = 50;
+    int mazeSize = 25;
     Field[][] maze = new Field[mazeSize][mazeSize];
 
     boolean gameStarted = false;
@@ -47,14 +47,21 @@ public class MazeFxController implements Initializable {
         random = new Random();
         canvas.focusTraversableProperty().set(true);
         gc = canvas.getGraphicsContext2D();
-        //bNewGame.setVisible(false);
         newGame();
     }
 
     @FXML
     void move(KeyEvent event) {
+
         if (event.getCode() == KeyCode.N) {
             newGame();
+            return;
+        }else if (event.getCode() == KeyCode.R) {
+            resetGame();
+            return;
+        }
+        else if (event.getCode() == KeyCode.B) {
+            botResolve();
             return;
         }
         move(event.getCode());
@@ -352,6 +359,32 @@ public class MazeFxController implements Initializable {
         generateMaze();
         maze[newGameCurrents[0]][newGameCurrents[1]] = Field.PLAYER;
         showMaze();
+    }
+
+    void resetGame(){
+        for (int row = 0; row < mazeSize; row++) {
+            for (int column = 0; column < mazeSize; column++) {
+                if(maze[row][column]==Field.PLAYER){
+                    maze[row][column] = Field.EMPTY;
+                    break;
+                }
+            }
+        }
+
+        initNewGameVars();
+        maze[newGameCurrents[0]][newGameCurrents[1]] = Field.PLAYER;
+        showMaze();
+    }
+
+    void botResolve(){
+        int[][] mazeCopy = new int[mazeSize][mazeSize];
+        for (int row = 0; row < mazeSize; row++) {
+            for (int column = 0; column < mazeSize; column++) {
+                Field f = maze[row][column];
+                mazeCopy[row][column] = f.value;
+            }
+        }
+
     }
 
 }
