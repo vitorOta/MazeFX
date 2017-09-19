@@ -1,7 +1,7 @@
 *For Fun*
 
 # MazeFX
-Implementation of a Maze using JavaFX (see [C++ version](https://github.com/vitorOta/Maze))
+Implementation of a Maze using JavaFX (from [C++ version](https://github.com/vitorOta/Maze))
 
 ### // TODO
 1. [x] create a function to generate random mazes
@@ -10,4 +10,5 @@ Implementation of a Maze using JavaFX (see [C++ version](https://github.com/vito
 
 
 ### // Future
-1. [ ] improve maze generator complexity
+1. [x] improve maze generator complexity
+2. [ ] Refactor
