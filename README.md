@@ -6,7 +6,7 @@ Implementation of a Maze using JavaFX (from [C++ version](https://github.com/vit
 ![screenshot of the game](https://raw.githubusercontent.com/vitorOta/MazeFX/master/screenshot.PNG)
 
 ## Controls
-- **Arrow Keys** to move
+- **Arrow Keys** or **WASD** to move
 - **R** to reset
 - **N** to start a new game (with a new maze)
 
