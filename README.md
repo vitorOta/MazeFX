@@ -1,7 +1,7 @@
 *For Fun*
 
 # MazeFX
-Implementation of a Maze using JavaFX (from [C++ version](https://github.com/vitorOta/Maze))
+A Maze generator/game build with JavaFX (from [C++ version](https://github.com/vitorOta/Maze))
 
 ![screenshot of the game](https://raw.githubusercontent.com/vitorOta/MazeFX/master/screenshot.PNG)
 
